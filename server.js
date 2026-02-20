@@ -106,18 +106,21 @@ app.get('/api/hero-slides', async (req, res) => {
 app.post('/api/hero-slides', upload.single('image'), async (req, res) => {
   try {
     const { title, subtitle } = req.body;
-    console.log('✅ Cloudinary Upload:', req.file.path);
+    console.log('✅ Hero Cloudinary Upload:', req.file.path);
+    console.log('📝 Hero File Details:', { filename: req.file.filename, path: req.file.path });
 
     const slide = new HeroSlide({
       title,
       subtitle,
-      imageUrl: req.file.path
+      imageUrl: req.file.path // Cloudinary URL
     });
 
-    await slide.save();
-    res.json({ success: true });
+    const savedSlide = await slide.save();
+    console.log('💾 Hero Saved to DB:', savedSlide.imageUrl);
+    res.json({ success: true, message: 'Hero slide uploaded to Cloudinary' });
 
   } catch (err) {
+    console.error('❌ Hero Upload Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -146,19 +149,27 @@ app.post('/api/faculty', upload.single('image'), async (req, res) => {
   try {
     const { name, department, position, email, phone } = req.body;
 
-    const faculty = new Faculty({
+    const facultyData = {
       name,
       department,
       position,
       email,
       phone,
-      imageUrl: req.file ? req.file.path : null
-    });
+      imageUrl: req.file ? req.file.path : null // Cloudinary URL
+    };
 
-    await faculty.save();
-    res.json({ success: true });
+    if (req.file) {
+      console.log('✅ Faculty Cloudinary Upload:', req.file.path);
+      console.log('📝 Faculty File Details:', { filename: req.file.filename, path: req.file.path });
+    }
+
+    const faculty = new Faculty(facultyData);
+    const savedFaculty = await faculty.save();
+    console.log('💾 Faculty Saved to DB:', savedFaculty.imageUrl);
+    res.json({ success: true, message: 'Faculty uploaded to Cloudinary' });
 
   } catch (err) {
+    console.error('❌ Faculty Upload Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -169,12 +180,15 @@ app.put('/api/faculty/:id', upload.single('image'), async (req, res) => {
     const updateData = { name, department, position, email, phone };
     
     if (req.file) {
-      updateData.imageUrl = req.file.path;
+      updateData.imageUrl = req.file.path; // Cloudinary URL
+      console.log('✅ Faculty Update Cloudinary:', req.file.path);
     }
 
-    await Faculty.findByIdAndUpdate(req.params.id, updateData);
-    res.json({ success: true });
+    const updatedFaculty = await Faculty.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    console.log('💾 Faculty Updated in DB:', updatedFaculty.imageUrl);
+    res.json({ success: true, message: 'Faculty updated with Cloudinary' });
   } catch (err) {
+    console.error('❌ Faculty Update Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -333,13 +347,17 @@ app.post('/api/notices', upload.single('image'), async (req, res) => {
     const noticeData = { title, content, priority };
     
     if (req.file) {
-      noticeData.imageUrl = req.file.path;
+      noticeData.imageUrl = req.file.path; // Cloudinary URL
+      console.log('✅ Notice Cloudinary Upload:', req.file.path);
+      console.log('📝 Notice File Details:', { filename: req.file.filename, path: req.file.path });
     }
     
     const notice = new Notice(noticeData);
-    await notice.save();
-    res.json({ success: true });
+    const savedNotice = await notice.save();
+    console.log('💾 Notice Saved to DB:', savedNotice.imageUrl);
+    res.json({ success: true, message: 'Notice uploaded to Cloudinary' });
   } catch (err) {
+    console.error('❌ Notice Upload Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -350,12 +368,15 @@ app.put('/api/notices/:id', upload.single('image'), async (req, res) => {
     const updateData = { title, content, priority };
     
     if (req.file) {
-      updateData.imageUrl = req.file.path;
+      updateData.imageUrl = req.file.path; // Cloudinary URL
+      console.log('✅ Notice Update Cloudinary:', req.file.path);
     }
     
-    await Notice.findByIdAndUpdate(req.params.id, updateData);
-    res.json({ success: true });
+    const updatedNotice = await Notice.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    console.log('💾 Notice Updated in DB:', updatedNotice.imageUrl);
+    res.json({ success: true, message: 'Notice updated with Cloudinary' });
   } catch (err) {
+    console.error('❌ Notice Update Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
