@@ -139,21 +139,28 @@ app.delete('/api/hero-slides/:id', async (req, res) => {
 app.get('/api/faculty', async (req, res) => {
   try {
     const faculty = await Faculty.find();
-    console.log('🔍 Faculty DB Data:', faculty.map(f => ({ name: f.name, imageUrl: f.imageUrl })));
     
-    // Fix old URLs that don't start with http
-    const fixedFaculty = faculty.map(member => {
-      if (member.imageUrl && !member.imageUrl.startsWith('http')) {
-        console.log(`🔧 Fixing URL for ${member.name}: ${member.imageUrl}`);
-        return {
-          ...member.toObject(),
-          imageUrl: null // Remove broken URLs
-        };
+    // Clean URLs - send only valid Cloudinary URLs
+    const cleanedFaculty = faculty.map(member => {
+      let cleanUrl = null;
+      
+      if (member.imageUrl) {
+        if (member.imageUrl.startsWith('https://res.cloudinary.com/')) {
+          cleanUrl = member.imageUrl; // Already clean Cloudinary URL
+        } else if (member.imageUrl.startsWith('http')) {
+          cleanUrl = member.imageUrl; // Other valid HTTP URL
+        }
+        // Ignore filename-only URLs
       }
-      return member;
+      
+      return {
+        ...member.toObject(),
+        imageUrl: cleanUrl
+      };
     });
     
-    res.json(fixedFaculty);
+    console.log('🔧 Cleaned Faculty URLs:', cleanedFaculty.map(f => ({ name: f.name, imageUrl: f.imageUrl })));
+    res.json(cleanedFaculty);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -350,19 +357,26 @@ app.get('/api/notices', async (req, res) => {
   try {
     const notices = await Notice.find({ isActive: true }).sort({ createdAt: -1 });
     
-    // Fix old URLs that don't start with http
-    const fixedNotices = notices.map(notice => {
-      if (notice.imageUrl && !notice.imageUrl.startsWith('http')) {
-        console.log(`🔧 Fixing Notice URL: ${notice.imageUrl}`);
-        return {
-          ...notice.toObject(),
-          imageUrl: null // Remove broken URLs
-        };
+    // Clean URLs - send only valid Cloudinary URLs
+    const cleanedNotices = notices.map(notice => {
+      let cleanUrl = null;
+      
+      if (notice.imageUrl) {
+        if (notice.imageUrl.startsWith('https://res.cloudinary.com/')) {
+          cleanUrl = notice.imageUrl; // Already clean Cloudinary URL
+        } else if (notice.imageUrl.startsWith('http')) {
+          cleanUrl = notice.imageUrl; // Other valid HTTP URL
+        }
+        // Ignore filename-only URLs
       }
-      return notice;
+      
+      return {
+        ...notice.toObject(),
+        imageUrl: cleanUrl
+      };
     });
     
-    res.json(fixedNotices);
+    res.json(cleanedNotices);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
