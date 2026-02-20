@@ -1,9 +1,16 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const multer = require('multer');
-const path = require('path');
 require('./db'); // mongodb connect
 const { Admin, Gallery, HeroSlide, Faculty, Course, Admission, Contact, Notice, Event, Review } = require('./models');
+const { upload } = require('./cloudinary');
+
+// 🔥 ENV CHECK
+console.log('🔧 ENV CHECK:', {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY ? '✅ Set' : '❌ Missing',
+  api_secret: process.env.CLOUDINARY_API_SECRET ? '✅ Set' : '❌ Missing'
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -13,21 +20,19 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// uploads folder static
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// 🔥 FIX multer path
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, 'uploads')),
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + path.extname(file.originalname))
-});
-const upload = multer({ storage });
-
 
 // 🔥 HOME ROUTE FIX
 app.get("/", (req,res)=>{
   res.send("🔥 School Backend Running Successfully");
+});
+
+// 🧠 TEST CLOUDINARY
+app.get('/test-cloudinary', (req, res) => {
+  res.json({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY ? 'Set' : 'Missing',
+    api_secret: process.env.CLOUDINARY_API_SECRET ? 'Set' : 'Missing'
+  });
 });
 
 
@@ -58,16 +63,22 @@ app.post('/api/gallery', upload.array('images'), async (req, res) => {
   try {
     const { category, adminId } = req.body;
 
-    const images = req.files.map(file => ({
-      imageUrl: `/uploads/${file.filename}`,
-      category: category || 'All',
-      uploadedBy: adminId
-    }));
+    const images = req.files.map(file => {
+      console.log('✅ Cloudinary Upload SUCCESS:', file.path);
+      console.log('📝 File Details:', { filename: file.filename, path: file.path });
+      return {
+        imageUrl: file.path, // Cloudinary URL
+        category: category || 'All',
+        uploadedBy: adminId
+      };
+    });
 
-    await Gallery.insertMany(images);
-    res.json({ success: true });
+    const savedImages = await Gallery.insertMany(images);
+    console.log('💾 Saved to DB:', savedImages.map(img => img.imageUrl));
+    res.json({ success: true, message: 'Images uploaded to Cloudinary', count: images.length });
 
   } catch (err) {
+    console.error('❌ Upload Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -95,11 +106,12 @@ app.get('/api/hero-slides', async (req, res) => {
 app.post('/api/hero-slides', upload.single('image'), async (req, res) => {
   try {
     const { title, subtitle } = req.body;
+    console.log('✅ Cloudinary Upload:', req.file.path);
 
     const slide = new HeroSlide({
       title,
       subtitle,
-      imageUrl: `/uploads/${req.file.filename}`
+      imageUrl: req.file.path
     });
 
     await slide.save();
@@ -140,7 +152,7 @@ app.post('/api/faculty', upload.single('image'), async (req, res) => {
       position,
       email,
       phone,
-      imageUrl: req.file ? `/uploads/${req.file.filename}` : null
+      imageUrl: req.file ? req.file.path : null
     });
 
     await faculty.save();
@@ -157,7 +169,7 @@ app.put('/api/faculty/:id', upload.single('image'), async (req, res) => {
     const updateData = { name, department, position, email, phone };
     
     if (req.file) {
-      updateData.imageUrl = `/uploads/${req.file.filename}`;
+      updateData.imageUrl = req.file.path;
     }
 
     await Faculty.findByIdAndUpdate(req.params.id, updateData);
@@ -321,7 +333,7 @@ app.post('/api/notices', upload.single('image'), async (req, res) => {
     const noticeData = { title, content, priority };
     
     if (req.file) {
-      noticeData.imageUrl = `/uploads/${req.file.filename}`;
+      noticeData.imageUrl = req.file.path;
     }
     
     const notice = new Notice(noticeData);
@@ -338,7 +350,7 @@ app.put('/api/notices/:id', upload.single('image'), async (req, res) => {
     const updateData = { title, content, priority };
     
     if (req.file) {
-      updateData.imageUrl = `/uploads/${req.file.filename}`;
+      updateData.imageUrl = req.file.path;
     }
     
     await Notice.findByIdAndUpdate(req.params.id, updateData);
