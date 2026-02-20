@@ -139,7 +139,21 @@ app.delete('/api/hero-slides/:id', async (req, res) => {
 app.get('/api/faculty', async (req, res) => {
   try {
     const faculty = await Faculty.find();
-    res.json(faculty);
+    console.log('🔍 Faculty DB Data:', faculty.map(f => ({ name: f.name, imageUrl: f.imageUrl })));
+    
+    // Fix old URLs that don't start with http
+    const fixedFaculty = faculty.map(member => {
+      if (member.imageUrl && !member.imageUrl.startsWith('http')) {
+        console.log(`🔧 Fixing URL for ${member.name}: ${member.imageUrl}`);
+        return {
+          ...member.toObject(),
+          imageUrl: null // Remove broken URLs
+        };
+      }
+      return member;
+    });
+    
+    res.json(fixedFaculty);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -335,7 +349,20 @@ app.put('/api/contacts/:id/status', async (req, res) => {
 app.get('/api/notices', async (req, res) => {
   try {
     const notices = await Notice.find({ isActive: true }).sort({ createdAt: -1 });
-    res.json(notices);
+    
+    // Fix old URLs that don't start with http
+    const fixedNotices = notices.map(notice => {
+      if (notice.imageUrl && !notice.imageUrl.startsWith('http')) {
+        console.log(`🔧 Fixing Notice URL: ${notice.imageUrl}`);
+        return {
+          ...notice.toObject(),
+          imageUrl: null // Remove broken URLs
+        };
+      }
+      return notice;
+    });
+    
+    res.json(fixedNotices);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
